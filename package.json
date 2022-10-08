@@ -14,6 +14,7 @@
     "ios",
     "cpp",
     "react-native-sip-phone.podspec",
+    "third_party_podspecs",
     "!lib/typescript/example",
     "!android/build",
     "!ios/build",
