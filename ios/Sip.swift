@@ -50,7 +50,11 @@ class Sip: RCTEventEmitter {
                   case .IncomingReceived:
                       // Immediately hang up when we receive a call. There's nothing inherently wrong with this
                       // but we don't need it right now, so better to leave it deactivated.
-                      try! call.terminate()
+                      // try! call.terminate()
+                      let params: CallParams = try!core.createCallParams(call: call)
+                      params.videoEnabled = true
+                      try! call.acceptWithParams(params: params)
+                      self.sendEvent(eventName: "IncomingCall")
                    case .OutgoingInit:
                       // First state an outgoing call will go through
                       self.sendEvent(eventName: "ConnectionRequested")
@@ -155,7 +159,7 @@ class Sip: RCTEventEmitter {
     
     @objc
     override func supportedEvents() -> [String]! {
-        return ["ConnectionRequested", "CallRequested", "CallRinging", "CallConnected", "CallStreamsRunning", "CallPaused", "CallPausedByRemote", "CallUpdating", "CallUpdatedByRemote", "CallReleased", "CallError", "AudioDevicesChanged"]
+        return ["IncomingCall", "ConnectionRequested", "CallRequested", "CallRinging", "CallConnected", "CallStreamsRunning", "CallPaused", "CallPausedByRemote", "CallUpdating", "CallUpdatedByRemote", "CallReleased", "CallError", "AudioDevicesChanged"]
     }
     
     @objc(unregister:withRejecter:)
@@ -234,7 +238,7 @@ class Sip: RCTEventEmitter {
             // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
             params.mediaEncryption = MediaEncryption.None
             // If we wanted to start the call with video directly
-            //params.videoEnabled = true
+            params.videoEnabled = true
             
             // Finally we start the call
             let _ = mCore.inviteAddressWithParams(addr: remoteAddress, params: params)

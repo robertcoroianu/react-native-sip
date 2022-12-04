@@ -4,4 +4,5 @@ export {
   useAudioDevices,
   useMicrophone,
   DtmfChar,
+  navigateToCall,
 } from './native-wrapper'

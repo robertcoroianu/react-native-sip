@@ -1,17 +1,25 @@
 package com.reactnativesip
 
+import android.Manifest
 import android.util.Log
+import android.view.TextureView
 import com.facebook.react.bridge.*
+import android.content.pm.PackageManager
+import android.widget.*
+import androidx.core.app.ActivityCompat
+import android.app.Activity;
+import android.content.Intent;
 
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import org.linphone.core.*
-
+import org.linphone.mediastream.video.capture.*
 
 class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaModule(reactContext) {
   private val context = reactContext.applicationContext
   private val packageManager = context.packageManager
   private val reactContext = reactContext
 
+  private var incomingCall: Call? = null;
   private var bluetoothMic: AudioDevice? = null
   private var bluetoothSpeaker: AudioDevice? = null
   private var earpiece: AudioDevice? = null
@@ -19,10 +27,10 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   private var loudSpeaker: AudioDevice? = null
   private var microphone: AudioDevice? = null
 
-  private lateinit var core: Core
 
   companion object {
     const val TAG = "SipModule"
+    lateinit var core: Core
   }
 
   override fun getName(): String {
@@ -47,6 +55,17 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     .emit(eventName, null)
   }
 
+  @ReactMethod
+  fun navigateToCall() {
+    val intent = Intent(reactContext.currentActivity, OutgoingCallActivity::class.java)
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    context.startActivity(intent)
+  }
+
+  @ReactMethod
+  fun goBackToRNApp() {
+    reactContext.currentActivity?.finish()
+  }
 
   @ReactMethod
   fun addListener(eventName: String) {
@@ -87,6 +106,31 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     val factory = Factory.instance()
     factory.setDebugMode(true, "Connected to linphone")
     core = factory.createCore(null, null, context)
+
+    core.isPushNotificationEnabled = true
+    // For video to work, we need two TextureViews:
+    // one for the remote video and one for the local preview
+     core.nativeVideoWindowId = TextureView(context)//findViewById(R.id.remote_video_surface)
+    // The local preview is a org.linphone.mediastream.video.capture.CaptureTextureView
+    // which inherits from TextureView and contains code to keep the ratio of the capture video
+     core.nativePreviewWindowId = CaptureTextureView(context)//findViewById(R.id.local_preview_video_surface)
+
+    // Here we enable the video capture & display at Core level
+    // It doesn't mean calls will be made with video automatically,
+    // But it allows to use it later
+    core.enableVideoCapture(true)
+    core.enableVideoDisplay(true)
+
+    // When enabling the video, the remote will either automatically answer the update request
+    // or it will ask it's user depending on it's policy.
+    // Here we have configured the policy to always automatically accept video requests
+    core.videoActivationPolicy.automaticallyAccept = true
+    // If you don't want to automatically accept,
+    // you'll have to use a code similar to the one in toggleVideo to answer a received request
+
+    // If the following property is enabled, it will automatically configure created call params with video enabled
+    core.videoActivationPolicy.automaticallyInitiate = true
+
     core.start()
 
     val coreListener = object : CoreListenerStub() {
@@ -104,7 +148,10 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
           Call.State.IncomingReceived -> {
             // Immediately hang up when we receive a call. There's nothing inherently wrong with this
             // but we don't need it right now, so better to leave it deactivated.
-            call.terminate()
+            // call.terminate()
+
+            incomingCall = call;
+            sendEvent("IncomingCall")
           }
           Call.State.OutgoingInit -> {
             // First state an outgoing call will go through
@@ -119,6 +166,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
             sendEvent("CallRinging")
           }
           Call.State.Connected -> {
+            navigateToCall()
             sendEvent("CallConnected")
           }
           Call.State.StreamsRunning -> {
@@ -142,9 +190,11 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
             sendEvent("CallUpdatedByRemote")
           }
           Call.State.Released -> {
+            goBackToRNApp()
             sendEvent("CallReleased")
           }
           Call.State.Error -> {
+            goBackToRNApp()
             sendEvent("CallError")
           }
           else -> {
@@ -158,8 +208,8 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun login(username: String, password: String, domain: String, promise: Promise) {
-    val transportType = TransportType.Tls
+  fun login(username: String, password: String, domain: String, fcmToken: String, promise: Promise) {
+    val transportType = TransportType.Tcp
 
     // To configure a SIP account, we need an Account object and an AuthInfo object
     // The first one is how to connect to the proxy server, the second one stores the credentials
@@ -179,6 +229,13 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     val identity = Factory.instance().createAddress("sip:$username@$domain")
     accountParams.identityAddress = identity
 
+    accountParams.pushNotificationAllowed = true
+
+    accountParams.pushNotificationConfig.prid = fcmToken
+    accountParams.pushNotificationConfig.provider = "fcm"
+    accountParams.pushNotificationConfig.param = "keypass-lock"
+    accountParams.pushNotificationConfig.bundleIdentifier = "com.easydo.keypaas.intercom"
+
     // We also need to configure where the proxy server is located
     val address = Factory.instance().createAddress("sip:$domain")
     // We use the Address object to easily set the transport protocol
@@ -193,6 +250,8 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     // Now let's add our objects to the Core
     core.addAuthInfo(authInfo)
     core.addAccount(account)
+
+    core.config.setBool("video", "auto_resize_preview_to_keep_ratio", true)
 
     // Also set the newly added account as default
     core.defaultAccount = account
@@ -213,6 +272,16 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
         }
       }
+    }
+
+    if (packageManager.checkPermission(Manifest.permission.RECORD_AUDIO, context.packageName) != PackageManager.PERMISSION_GRANTED) {
+      reactContext.currentActivity?.let { ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.RECORD_AUDIO), 0) }
+        return
+    }
+
+    if (packageManager.checkPermission(Manifest.permission.CAMERA, context.packageName) != PackageManager.PERMISSION_GRANTED) {
+      reactContext.currentActivity?.let { ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.CAMERA), 0) }
+        return
     }
   }
 
@@ -237,6 +306,32 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
+  fun acceptIncomingCall(promise: Promise) {
+    if(incomingCall == null) {
+      promise.reject("No incoming calls", "No incoming calls")
+    } else {
+      val params: CallParams? = core.createCallParams(incomingCall)
+      params?.mediaEncryption = MediaEncryption.None
+      params?.enableVideo(true)
+      params?.enableEarlyMediaSending(true)
+      params?.videoDirection = MediaDirection.SendRecv
+      incomingCall?.acceptWithParams(params)
+      incomingCall?.update(params)
+      promise.resolve(null)
+    }
+  }
+
+  @ReactMethod
+  fun declineIncomingCall(promise: Promise) {
+    if(incomingCall == null) {
+      promise.reject("No incoming calls", "No incoming calls")
+    } else {
+      incomingCall?.terminate()
+      promise.resolve(null)
+    }
+  }
+
+  @ReactMethod
   fun outgoingCall(recipient: String, promise: Promise) {
     // As for everything we need to get the SIP URI of the remote and convert it to an Address
     val remoteAddress = Factory.instance().createAddress(recipient)
@@ -252,7 +347,10 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
       params.mediaEncryption = MediaEncryption.None
       // If we wanted to start the call with video directly
-      //params.enableVideo(true)
+      params.videoDirection = MediaDirection.SendRecv
+
+      params.enableVideo(true)
+      params.enableEarlyMediaSending(true)
 
       // Finally we start the call
       core.inviteAddressWithParams(remoteAddress, params)
