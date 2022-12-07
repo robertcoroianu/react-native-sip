@@ -19,6 +19,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   private val packageManager = context.packageManager
   private val reactContext = reactContext
 
+  private var coreInitialised: Boolean = false;
   private var incomingCall: Call? = null;
   private var bluetoothMic: AudioDevice? = null
   private var bluetoothSpeaker: AudioDevice? = null
@@ -88,7 +89,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   @ReactMethod
   fun hangUp(promise: Promise) {
     Log.i(TAG, "Trying to hang up")
-    if (core.callsNb == 0) return
+    if (core?.callsNb == 0) return
 
     // If the call state isn't paused, we can get it using core.currentCall
     val call = if (core.currentCall != null) core.currentCall else core.calls[0]
@@ -103,9 +104,15 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
   @ReactMethod
   fun initialise(promise: Promise) {
+    if(coreInitialised) {
+      promise.resolve("Already initialised")
+      return
+    }
+
     val factory = Factory.instance()
     factory.setDebugMode(true, "Connected to linphone")
     core = factory.createCore(null, null, context)
+    coreInitialised = true
 
     core.isPushNotificationEnabled = true
     // For video to work, we need two TextureViews:
@@ -311,12 +318,12 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       promise.reject("No incoming calls", "No incoming calls")
     } else {
       val params: CallParams? = core.createCallParams(incomingCall)
-      params?.mediaEncryption = MediaEncryption.None
+      // params?.mediaEncryption = MediaEncryption.None
       params?.enableVideo(true)
-      params?.enableEarlyMediaSending(true)
-      params?.videoDirection = MediaDirection.SendRecv
+      // params?.enableEarlyMediaSending(true)
+      params?.videoDirection = MediaDirection.RecvOnly
       incomingCall?.acceptWithParams(params)
-      incomingCall?.update(params)
+      // incomingCall?.update(params)
       promise.resolve(null)
     }
   }
@@ -347,7 +354,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
       params.mediaEncryption = MediaEncryption.None
       // If we wanted to start the call with video directly
-      params.videoDirection = MediaDirection.SendRecv
+      params.videoDirection = MediaDirection.RecvOnly
 
       params.enableVideo(true)
       params.enableEarlyMediaSending(true)
@@ -451,6 +458,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     account.params = params
     core.removeAccount(account)
     core.clearAllAuthInfo()
+    coreInitialised = false
 
     promise.resolve(true)
   }

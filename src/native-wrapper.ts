@@ -1,6 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 import { NativeEventEmitter } from 'react-native';
 import React from 'react';
+import BackgroundService from 'react-native-background-actions';
 
 const LINKING_ERROR =
   `The package 'react-native-sip-phone' doesn't seem to be linked. Make sure: \n\n` +
@@ -53,12 +54,45 @@ export function multiply(a: number, b: number): Promise<number> {
   return Sip.multiply(a, b);
 }
 
-export function login(
+export async function login(
   username: string,
   password: string,
   domain: string,
   fcmToken: string
 ): Promise<void> {
+  const sleep = (time: any) =>
+    new Promise((resolve) => setTimeout(() => resolve(null), time));
+
+  const veryIntensiveTask = async (taskDataArguments: any) => {
+    // Example of an infinite loop task
+    const { delay } = taskDataArguments;
+    await new Promise(async () => {
+      for (let i = 0; BackgroundService.isRunning(); i++) {
+        console.log(i);
+        await sleep(delay);
+      }
+    });
+  };
+
+  const options = {
+    taskName: 'Intercom',
+    taskTitle: 'KeyPaas intercom',
+    taskDesc: 'Calls service',
+    taskIcon: {
+      name: 'ic_launcher',
+      type: 'mipmap',
+    },
+    color: '#1b9c3d',
+    linkingURI: 'myapp://call', // See Deep Linking for more info
+    parameters: {
+      delay: 1000,
+    },
+  };
+
+  if (BackgroundService.isRunning() === false) {
+    await BackgroundService.start(veryIntensiveTask, options);
+  }
+
   return Sip.login(username, password, domain, fcmToken);
 }
 

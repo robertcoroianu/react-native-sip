@@ -65,21 +65,16 @@ class OutgoingCallActivity: ReactActivity() {
             hangUp()
         }
 
-        findViewById<Button>(R.id.pause).setOnClickListener {
-            pauseOrResume()
+        findViewById<Button>(R.id.openDoor).setOnClickListener {
+            openDoorPress()
         }
 
         findViewById<Button>(R.id.toggle_video).setOnClickListener {
             toggleVideo()
         }
 
-        findViewById<Button>(R.id.toggle_camera).setOnClickListener {
-            toggleCamera()
-        }
-
-        findViewById<Button>(R.id.pause).isEnabled = true
+        findViewById<Button>(R.id.openDoor).isEnabled = true
         findViewById<Button>(R.id.toggle_video).isEnabled = true
-        findViewById<Button>(R.id.toggle_camera).isEnabled = true
         findViewById<Button>(R.id.hang_up).isEnabled = true
     }
 
@@ -120,31 +115,12 @@ class OutgoingCallActivity: ReactActivity() {
         // Note that when toggling off the video, TextureViews will keep showing the latest frame displayed
     }
 
-    private fun toggleCamera() {
-        // Currently used camera
-        val currentDevice = core.videoDevice
-
-        // Let's iterate over all camera available and choose another one
-        for (camera in core.videoDevicesList) {
-            // All devices will have a "Static picture" fake camera, and we don't want to use it
-            if (camera != currentDevice && camera != "StaticImage: Static picture") {
-                core.videoDevice = camera
-                break
-            }
-        }
-    }
-
-    private fun pauseOrResume() {
+    private fun openDoorPress() {
         if (core.callsNb == 0) return
         val call = if (core.currentCall != null) core.currentCall else core.calls[0]
         call ?: return
 
-        if (call.state != Call.State.Paused && call.state != Call.State.Pausing) {
-            // If our call isn't paused, let's pause it
-            call.pause()
-        } else if (call.state != Call.State.Resuming) {
-            // Otherwise let's resume it
-            call.resume()
-        }
+        var dtmf = "#"
+        call?.sendDtmf(dtmf.single())
     }
 }

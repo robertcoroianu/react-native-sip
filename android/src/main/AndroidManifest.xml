@@ -39,5 +39,7 @@
             <action android:name="com.google.firebase.MESSAGING_EVENT" />
         </intent-filter>
     </service>
+
+    <service android:name="com.asterinet.react.bgactions.RNBackgroundActionsTask" />
   </application>
 </manifest>
