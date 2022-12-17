@@ -9,6 +9,7 @@ RCT_EXTERN_METHOD(initialise:(RCTPromiseResolveBlock)resolve
 RCT_EXTERN_METHOD(login:(NSString *)username
                   withPassword:(NSString *)password
                   withDomain:(NSString *)domain
+                  withFcmToken:(NSString *)fcmToken
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
@@ -25,6 +26,12 @@ RCT_EXTERN_METHOD(loudAudio:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(micEnabled:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(acceptIncomingCall:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(declineIncomingCall:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(outgoingCall:(NSString *)recipient

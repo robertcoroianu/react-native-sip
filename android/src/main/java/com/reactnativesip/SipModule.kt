@@ -280,20 +280,21 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
         }
       }
     }
-
+    
     if (packageManager.checkPermission(Manifest.permission.RECORD_AUDIO, context.packageName) != PackageManager.PERMISSION_GRANTED) {
       reactContext.currentActivity?.let { ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.RECORD_AUDIO), 0) }
-        return
-    }
-
-    if (packageManager.checkPermission(Manifest.permission.CAMERA, context.packageName) != PackageManager.PERMISSION_GRANTED) {
-      reactContext.currentActivity?.let { ActivityCompat.requestPermissions(it, arrayOf(Manifest.permission.CAMERA), 0) }
         return
     }
   }
 
   @ReactMethod
   fun loudAudio(promise: Promise) {
+    makeloudAudio()
+
+    promise.resolve(true)
+  }
+
+  fun makeloudAudio() {
     if (loudMic != null) {
       core.inputAudioDevice = loudMic
     } else if (microphone != null) {
@@ -303,8 +304,6 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
     if (loudSpeaker != null) {
       core.outputAudioDevice = loudSpeaker
     }
-
-    promise.resolve(true)
   }
 
   @ReactMethod
@@ -318,12 +317,13 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       promise.reject("No incoming calls", "No incoming calls")
     } else {
       val params: CallParams? = core.createCallParams(incomingCall)
-      // params?.mediaEncryption = MediaEncryption.None
+      params?.mediaEncryption = MediaEncryption.None
       params?.enableVideo(true)
       // params?.enableEarlyMediaSending(true)
       params?.videoDirection = MediaDirection.RecvOnly
       incomingCall?.acceptWithParams(params)
       // incomingCall?.update(params)
+      makeloudAudio()
       promise.resolve(null)
     }
   }
@@ -354,15 +354,16 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
       // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
       params.mediaEncryption = MediaEncryption.None
       // If we wanted to start the call with video directly
+      params.enableVideo(true)
       params.videoDirection = MediaDirection.RecvOnly
 
-      params.enableVideo(true)
-      params.enableEarlyMediaSending(true)
+      // params.enableEarlyMediaSending(true)
 
       // Finally we start the call
       core.inviteAddressWithParams(remoteAddress, params)
       // Call process can be followed in onCallStateChanged callback from core listener
 
+      makeloudAudio()
       promise.resolve(null)
     }
 

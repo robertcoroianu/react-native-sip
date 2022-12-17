@@ -5,4 +5,5 @@ export {
   useMicrophone,
   DtmfChar,
   navigateToCall,
+  unregister,
 } from './native-wrapper';

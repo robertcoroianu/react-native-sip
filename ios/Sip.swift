@@ -12,6 +12,7 @@ class Sip: RCTEventEmitter {
     private var loudMic: AudioDevice?
     private var loudSpeaker: AudioDevice?
     private var microphone: AudioDevice?
+    private var incomingCall: Call?
     
     @objc func delete() {
         // To completely remove an Account
@@ -35,6 +36,14 @@ class Sip: RCTEventEmitter {
             LoggingService.Instance.logLevel = LogLevel.Debug
             
             try? mCore = Factory.Instance.createCore(configPath: "", factoryConfigPath: "", systemContext: nil)
+            
+            mCore?.pushNotificationEnabled = true
+            mCore?.videoCaptureEnabled = true
+            mCore?.videoDisplayEnabled = true
+            
+            mCore.videoActivationPolicy?.automaticallyAccept = true
+            mCore.videoActivationPolicy?.automaticallyInitiate = true
+            
             try? mCore.start()
             
             // Create a Core listener to listen for the callback we need
@@ -51,9 +60,7 @@ class Sip: RCTEventEmitter {
                       // Immediately hang up when we receive a call. There's nothing inherently wrong with this
                       // but we don't need it right now, so better to leave it deactivated.
                       // try! call.terminate()
-                      let params: CallParams = try!core.createCallParams(call: call)
-                      params.videoEnabled = true
-                      try! call.acceptWithParams(params: params)
+                      self.incomingCall = call
                       self.sendEvent(eventName: "IncomingCall")
                    case .OutgoingInit:
                       // First state an outgoing call will go through
@@ -96,8 +103,8 @@ class Sip: RCTEventEmitter {
             resolve(true)
         }}
     
-    @objc(login:withPassword:withDomain:withResolver:withRejecter:)
-    func login(username: String, password: String, domain: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    @objc(login:withPassword:withDomain:withFcmToken:withResolver:withRejecter:)
+    func login(username: String, password: String, domain: String, fcmToken: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
             let transport = TransportType.Tls
             
@@ -117,6 +124,12 @@ class Sip: RCTEventEmitter {
             // A SIP account is identified by an identity address that we can construct from the username and domain
             let identity = try Factory.Instance.createAddress(addr: String("sip:" + username + "@" + domain))
             try! accountParams.setIdentityaddress(newValue: identity)
+            
+            accountParams.pushNotificationAllowed = true
+            accountParams.pushNotificationConfig?.prid = fcmToken
+            accountParams.pushNotificationConfig?.provider = "fcm"
+            accountParams.pushNotificationConfig?.param = "keypass-lock"
+            accountParams.pushNotificationConfig?.bundleIdentifier = "com.easydo.keypaas.intercom"
             
             // We also need to configure where the proxy server is located
             let address = try Factory.Instance.createAddress(addr: String("sip:" + domain))
@@ -224,6 +237,39 @@ class Sip: RCTEventEmitter {
         resolve(mCore.micEnabled)
     }
     
+    @objc(acceptIncomingCall:withRejecter:)
+    func acceptIncomingCall(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        do {
+            let params = try mCore.createCallParams(call: incomingCall)
+            // We also need a CallParams object
+            // Create call params expects a Call object for incoming calls, but for outgoing we must use null safely
+            
+            // We can now configure it
+            // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
+            // params.mediaEncryption = MediaEncryption.None
+            // If we wanted to start the call with video directly
+            params.videoEnabled = true
+            params.videoDirection = MediaDirection.RecvOnly
+            
+            try incomingCall?.acceptWithParams(params: params)
+            
+            // Call process can be followed in onCallStateChanged callback from core listener
+            resolve(nil)
+        } catch { NSLog(error.localizedDescription)
+            reject("Incoming call failure", "No incoming calls", error)
+        }
+    }
+    
+    @objc(declineIncomingCall:withRejecter:)
+    func declineIncomingCall(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        do {
+          try incomingCall?.terminate()
+          resolve(nil)
+        } catch { NSLog(error.localizedDescription)
+            reject("Incoming call failure", "No incoming calls", error)
+        }
+      }
+    
     @objc(outgoingCall:withResolver:withRejecter:)
     func outgoingCall(recipient: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
@@ -237,6 +283,7 @@ class Sip: RCTEventEmitter {
             // We can now configure it
             // Here we ask for no encryption but we could ask for ZRTP/SRTP/DTLS
             params.mediaEncryption = MediaEncryption.None
+            params.videoDirection = MediaDirection.RecvOnly
             // If we wanted to start the call with video directly
             params.videoEnabled = true
             

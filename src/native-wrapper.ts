@@ -234,3 +234,9 @@ export function useMicrophone(): [boolean, () => Promise<boolean>] {
 export function navigateToCall() {
   return Sip.navigateToCall();
 }
+
+export async function unregister() {
+  await BackgroundService.stop();
+  await Sip.unregister();
+  await Sip.initialise();
+}
