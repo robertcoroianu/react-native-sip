@@ -78,6 +78,9 @@ class OutgoingCallActivity: ReactActivity() {
         findViewById<Button>(R.id.hang_up).isEnabled = true
     }
 
+    override fun onBackPressed() {
+    }
+
     private fun hangUp() {
         if (core.callsNb == 0) return
 

@@ -236,7 +236,11 @@ export function navigateToCall() {
 }
 
 export async function unregister() {
-  await BackgroundService.stop();
-  await Sip.unregister();
-  await Sip.initialise();
+  try {
+    await BackgroundService.stop();
+    await Sip.unregister();
+    await Sip.initialise();
+  } catch (e) {
+    return false;
+  }
 }

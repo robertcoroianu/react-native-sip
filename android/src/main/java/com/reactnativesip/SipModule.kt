@@ -174,6 +174,7 @@ class SipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
           }
           Call.State.Connected -> {
             navigateToCall()
+            makeloudAudio()
             sendEvent("CallConnected")
           }
           Call.State.StreamsRunning -> {
