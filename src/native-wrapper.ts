@@ -206,6 +206,6 @@ export async function unregister() {
     await Sip.unregister();
     await Sip.initialise();
   } catch (e) {
-    return false;
+    return;
   }
 }
