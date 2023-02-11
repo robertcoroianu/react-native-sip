@@ -7679,13 +7679,6 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-native-background-actions@^2.6.7:
-  version "2.6.7"
-  resolved "https://registry.yarnpkg.com/react-native-background-actions/-/react-native-background-actions-2.6.7.tgz#01637518814aa957b877bf8117cee01266d67f43"
-  integrity sha512-qjHeks9EbLIXeb2xn3AR0eLVlUh/sAboKt0tI3ZN8leEEL1xmZUvpbk0fN6RKRpxpv7ATVHgWjGMK1FNoYh+Ug==
-  dependencies:
-    eventemitter3 "^4.0.7"
-
 react-native-builder-bob@^0.18.0:
   version "0.18.2"
   resolved "https://registry.npmjs.org/react-native-builder-bob/-/react-native-builder-bob-0.18.2.tgz"
