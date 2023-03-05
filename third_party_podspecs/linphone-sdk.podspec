@@ -16,7 +16,7 @@ folly_compiler_flags = folly_flags + ' ' + '-Wno-comma -Wno-shorten-64-to-32'
 Pod::Spec.new do |s|
 
   s.name         = "linphone-sdk"
-  s.version      = "5.0.53"
+  s.version      = "5.1.73"
   s.summary      = "Liblinphone is a library to create VoIP and IM apps, based on SIP protocol."
   s.description  = <<-PODSPEC_DESC
 Enabled features:
@@ -676,7 +676,7 @@ LICENSE
     }
   s.author       = { 'Belledonne Communications SARL' => 'linphone-iphone@belledonne-communications.com' }
   s.platform     = :ios, "11.0"
-  s.source       = { :http => "https://download.linphone.org/releases/ios/linphone-sdk-ios-5.0.53.zip" }
+  s.source       = { :http => "https://download.linphone.org/releases/ios/linphone-sdk-ios-5.1.73.zip" }
   s.vendored_frameworks = "linphone-sdk/apple-darwin/Frameworks/**"
   s.pod_target_xcconfig = { 'VALID_ARCHS' => "arm64 armv7 x86_64" }
   s.module_name   = 'linphonesw' # name of the swift package

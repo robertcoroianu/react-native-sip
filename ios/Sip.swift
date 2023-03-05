@@ -104,7 +104,7 @@ class Sip: RCTEventEmitter {
         }}
     
     @objc(login:withPassword:withDomain:withFcmToken:withResolver:withRejecter:)
-    func login(username: String, password: String, domain: String, fcmToken: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    func login(username: String, password: String, domain: String, fcmToken: String, voipToken: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
             let transport = TransportType.Tls
             
@@ -127,6 +127,7 @@ class Sip: RCTEventEmitter {
             
             accountParams.pushNotificationAllowed = true
             accountParams.pushNotificationConfig?.prid = fcmToken
+            accountParams.pushNotificationConfig?.voipToken = voipToken
             accountParams.pushNotificationConfig?.provider = "fcm"
             accountParams.pushNotificationConfig?.param = "keypass-lock"
             accountParams.pushNotificationConfig?.bundleIdentifier = "com.easydo.keypaas.intercom"

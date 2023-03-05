@@ -10,6 +10,7 @@ RCT_EXTERN_METHOD(login:(NSString *)username
                   withPassword:(NSString *)password
                   withDomain:(NSString *)domain
                   withFcmToken:(NSString *)fcmToken
+                  withVoipToken:(NSString *)voipToken
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 

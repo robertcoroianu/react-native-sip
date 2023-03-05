@@ -57,9 +57,10 @@ export async function login(
   username: string,
   password: string,
   domain: string,
-  fcmToken: string
+  fcmToken: string,
+  voipToken?: string
 ): Promise<void> {
-  return Sip.login(username, password, domain, fcmToken);
+  return Sip.login(username, password, domain, fcmToken, voipToken);
 }
 
 export type DtmfChar =
